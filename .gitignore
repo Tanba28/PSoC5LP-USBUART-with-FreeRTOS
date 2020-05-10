@@ -6,3 +6,4 @@
 !*.cydwr
 !*.cyprj
 !/*.cydsn/TopDesign
+!/*/FreeRTOS
