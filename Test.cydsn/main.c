@@ -10,6 +10,8 @@
  * ========================================
 */
 #include "project.h"
+#include "stdio.h"
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -23,9 +25,32 @@ void vTestTask1();
 void vTestTask2();
 void FreeRTOS_Setup();
 
+SemaphoreHandle_t xBinarySemaphore;
 
 CY_ISR(uart_que){
+    BaseType_t xHigherPriorityTaskWoken;
+    
+    xHigherPriorityTaskWoken = pdFALSE;
+   
+    xSemaphoreGiveFromISR( xBinarySemaphore, &xHigherPriorityTaskWoken );
+
+    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
+
+void USBUART_Setup(){
+    xBinarySemaphore = xSemaphoreCreateBinary();
+    isr_1_StartEx(uart_que);
+}
+
+void vUartTxIsrTask(){
+    for(;;){
+        xSemaphoreTake(xBinarySemaphore, portMAX_DELAY);
+        
+        USBUART_PutString_Wrapper("Hello World\r\n");
+    }
+    
+}
+
 int main(void)
 {
     CyGlobalIntEnable; /* Enable global interrupts. */
@@ -33,15 +58,20 @@ int main(void)
     /* Place your initialization/startup code here (e.g. MyInst_Start()) */
 
     FreeRTOS_Setup();
+    USBUART_Start_Wrapper();
     
     xTaskCreate(vTestTask1,"test1",100,NULL,3,NULL);
     xTaskCreate(vTestTask2,"test2",100,NULL,3,NULL);
     
+    USBUART_Setup();
+    
+    xTaskCreate(vUartTxIsrTask,"test3",100,NULL,3,NULL);
+    
     vTaskStartScheduler();
+    
     for(;;)
     {
         /* Place your application code here. */
-
     }
 }
 
