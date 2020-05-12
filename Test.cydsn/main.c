@@ -12,10 +12,20 @@
 #include "project.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
+
+void USBUART_Start_Wrapper();
+void USBUART_Connection_Check();
+void USBUART_PutString_Wrapper(const char8 string[]);
+
 
 void vTestTask1();
 void vTestTask2();
 void FreeRTOS_Setup();
+
+
+CY_ISR(uart_que){
+}
 int main(void)
 {
     CyGlobalIntEnable; /* Enable global interrupts. */
@@ -73,6 +83,30 @@ void vApplicationMallocFailedHook( void )
 {
     /* The heap space has been execeeded. */
     taskDISABLE_INTERRUPTS();
+}
+
+void USBUART_Start_Wrapper(){
+    USBUART_Start(0, USBUART_DWR_VDDD_OPERATION);
+    //500ms TimeOut
+    for(uint8_t i=0;i<100;i++){
+        if(0u != USBUART_bGetConfiguration()){
+            USBUART_CDC_Init();
+            break;
+        }
+        CyDelay(5);
+    }
+}
+void USBUART_Connection_Check(){
+    if(0u != USBUART_IsConfigurationChanged()){
+        if(0u != USBUART_GetConfiguration()){
+            USBUART_CDC_Init();
+        }
+    }
+}
+void USBUART_PutString_Wrapper(const char8 string[]){
+    if(0u != USBUART_GetConfiguration()){
+        USBUART_PutString(string);
+    }
 }
 
 /* [] END OF FILE */
