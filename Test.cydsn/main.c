@@ -22,31 +22,7 @@ void vTestTask1();
 void vTestTask2();
 void FreeRTOS_Setup();
 
-SemaphoreHandle_t xBinarySemaphore;
 
-CY_ISR(uart_que){
-    BaseType_t xHigherPriorityTaskWoken;
-    
-    xHigherPriorityTaskWoken = pdFALSE;
-   
-    xSemaphoreGiveFromISR( xBinarySemaphore, &xHigherPriorityTaskWoken );
-
-    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-}
-
-void USBUART_Setup(){
-    xBinarySemaphore = xSemaphoreCreateBinary();
-    isr_1_StartEx(uart_que);
-}
-
-void vUartTxIsrTask(){
-    for(;;){
-        xSemaphoreTake(xBinarySemaphore, portMAX_DELAY);
-        
-        USBUART_PutString_Wrapper("Hello World\r\n");
-    }
-    
-}
 
 int main(void)
 {
