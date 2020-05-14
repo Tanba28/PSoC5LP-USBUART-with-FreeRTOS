@@ -24,6 +24,10 @@ void USBUART_Start_Wrapper();
 void USBUART_Connection_Check();
 void USBUART_PutString_Wrapper(const char8 string[]);
 
+void vPutString(const char string[]);
+void vUSBUARTPutChar(const char ch);
+void vUSBUARTTxTask();
+
 void USBUART_Start_Wrapper(){
     USBUART_Start(0, USBUART_DWR_VDDD_OPERATION);
     //500ms TimeOut
@@ -50,39 +54,52 @@ void USBUART_PutString_Wrapper(const char8 string[]){
     }
 }
 
-
-
 QueueHandle_t xUartTxFifoQue;
+SemaphoreHandle_t xUartTxBinarySemaphor;
 
-void USBUART_Setup(){    
-    xUartTxFifoQue = xQueueCreate(4,64);
+void USBUART_Setup(){
+    xUartTxFifoQue = xQueueCreate(64,1);//USBUART tx buffer queue.
+    xUartTxBinarySemaphor = xSemaphoreCreateBinary();//Binary semaphore for tx buffer prevent write conflict.
+    
+    xSemaphoreGive(xUartTxBinarySemaphor) ;
 }
 
-CYBIT USBUARTPutStringQue(const char8 string[]){
-    BaseType_t xStatus;
-    
-    xStatus = xQueueSendToBack(xUartTxFifoQue,string,100);
-    
-    if(xStatus == errQUEUE_FULL){
-        return 1;
-    }
-    return 0;
+void vUSBUARTPutString(const char *cString){    
+    xSemaphoreTake(xUartTxBinarySemaphor,portMAX_DELAY);//Prevent queue write conflict.
+    for(uint8_t ucCount=0; ucCount<strlen(cString); ucCount++){
+        vUSBUARTPutChar(cString[ucCount]);        
+    }    
 }
 
-void vUartTxTask(){
-    char txBuffer[64];
+void vUSBUARTPutChar(const char ch){
     BaseType_t xStatus;
     
-    for(;;){
-        xStatus = xQueueReceive( xUartTxFifoQue, &txBuffer, portMAX_DELAY );
+    xStatus = xQueueSendToBack(xUartTxFifoQue,&ch,portMAX_DELAY);
+}
 
-        if(xStatus == pdPASS){
-            if(USBUART_CDCIsReady()){
-                USBUART_PutData((uint8_t*)txBuffer,strlen(txBuffer));
+void vUSBUARTTxTask(){
+    BaseType_t xStatus;
+
+    char cString[64];//One packet tx buffer
+    uint8_t ucUartTxCounter = 0;
+    
+    TickType_t xTick = xTaskGetTickCount();
+    for(;;){        
+        xStatus = xQueueReceive(xUartTxFifoQue,&cString[ucUartTxCounter],portMAX_DELAY);
+        
+        if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0 || ucUartTxCounter == 63){
+            USBUART_PutData((uint8_t*)cString,ucUartTxCounter);
+            ucUartTxCounter = 0;
+            
+            if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0){
+                xSemaphoreGive(xUartTxBinarySemaphor) ;
             }
         }
+        
+        else{
+            ucUartTxCounter++;
+        }
     }
-    
 }
 
 #endif

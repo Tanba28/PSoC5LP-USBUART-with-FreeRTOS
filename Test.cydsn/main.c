@@ -17,7 +17,7 @@
 #include "semphr.h"
 
 #include "UABUART_lib.h"
-
+#include "xprintf.h"
 void vTestTask1();
 void vTestTask2();
 void FreeRTOS_Setup();
@@ -33,12 +33,12 @@ int main(void)
     FreeRTOS_Setup();
     USBUART_Start_Wrapper();
     
-    xTaskCreate(vTestTask1,"test1",100,NULL,3,NULL);
-    xTaskCreate(vTestTask2,"test2",100,NULL,3,NULL);
+    xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
+    xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
     
     USBUART_Setup();
     
-    xTaskCreate(vUartTxTask,"test3",100,NULL,1,NULL);
+    xTaskCreate(vUSBUARTTxTask,"test3",100,NULL,2,NULL);
     
     vTaskStartScheduler();
     
@@ -60,19 +60,31 @@ void FreeRTOS_Setup(){
 }
 
 void vTestTask1(){
+    uint count = 0;
+    TickType_t tick = xTaskGetTickCount();
+    char buf[128];
+    
     for(;;){
         LED_1_Write(1);  
-        USBUARTPutStringQue("HELLO\r\n");
-        vTaskDelay(1000);
+        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello\r\n",xTaskGetTickCount());
+        vUSBUARTPutString(buf);
+        count++;
+        vTaskDelayUntil(&tick,100);
     }    
 }
-//LEDを消灯させるタスク
+
 void vTestTask2(){
-    vTaskDelay(500);   
+    uint count = 0;
+    vTaskDelay(5);  
+    TickType_t tick = xTaskGetTickCount();
+    char buf[128];    
+    
     for(;;){      
-        LED_1_Write(0);
-        USBUARTPutStringQue("WORLD\r\n");
-        vTaskDelay(1000);
+        LED_1_Write(0);  
+        sprintf(buf,"B %07d World World World World World World World\r\n",xTaskGetTickCount());
+        vUSBUARTPutString(buf);
+        count++;
+        vTaskDelayUntil(&tick,100);
     }    
 }
 
