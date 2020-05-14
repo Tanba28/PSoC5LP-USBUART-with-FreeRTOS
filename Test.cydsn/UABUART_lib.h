@@ -35,6 +35,7 @@ void USBUART_Start_Wrapper(){
         CyDelay(5);
     }
 }
+
 void USBUART_Connection_Check(){
     if(0u != USBUART_IsConfigurationChanged()){
         if(0u != USBUART_GetConfiguration()){
@@ -42,68 +43,44 @@ void USBUART_Connection_Check(){
         }
     }
 }
+
 void USBUART_PutString_Wrapper(const char8 string[]){
     if(0u != USBUART_GetConfiguration()){
         USBUART_PutString(string);
     }
 }
 
-uint8_t uartTxQueue[64];
-uint8_t uartTxCount = 0;
-CYBIT uartZlpRequired = 0;
 
-SemaphoreHandle_t xUartTxBinarySemaphore;
-SemaphoreHandle_t xUartTxFifoBinarySemaphore;
 
-QueueHandle_t xUartTxFifoQueue;
+QueueHandle_t xUartTxFifoQue;
 
-CY_ISR(uart_que){
-    BaseType_t xHigherPriorityTaskWoken;
-    
-    xHigherPriorityTaskWoken = pdFALSE;
-   
-    xSemaphoreGiveFromISR( xUartTxBinarySemaphore, &xHigherPriorityTaskWoken );
-
-    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+void USBUART_Setup(){    
+    xUartTxFifoQue = xQueueCreate(4,64);
 }
 
-void USBUART_Setup(){
-    xUartTxBinarySemaphore = xSemaphoreCreateBinary();
+CYBIT USBUARTPutStringQue(const char8 string[]){
+    BaseType_t xStatus;
     
-    xUartTxFifoQueue = xQueueCreate(4,64);
-    isr_1_StartEx(uart_que);
+    xStatus = xQueueSendToBack(xUartTxFifoQue,string,100);
+    
+    if(xStatus == errQUEUE_FULL){
+        return 1;
+    }
+    return 0;
 }
 
-void vPutCh(){
+void vUartTxTask(){
+    char txBuffer[64];
+    BaseType_t xStatus;
     
-}
-void vUartTxIsrTask(){
-    uint8_t txBuffer[65];//txBuffer[64] = \0
-    BaseType_t xStatusQue;
-    CYBIT uartZlpRequired = 0;
     for(;;){
-        xSemaphoreTake(xUartTxBinarySemaphore, portMAX_DELAY);
-        
-        taskENTER_CRITICAL();
-        
-        xStatusQue = xQueueReceive(xUartTxFifoQueue,txBuffer,portMAX_DELAY);
-        if(xStatusQue == pdPASS || uartZlpRequired){
+        xStatus = xQueueReceive( xUartTxFifoQue, &txBuffer, portMAX_DELAY );
+
+        if(xStatus == pdPASS){
             if(USBUART_CDCIsReady()){
-                if(strlen((char*)txBuffer)==64){
-                    USBUART_PutData(uartTxQueue
-                }
+                USBUART_PutData((uint8_t*)txBuffer,strlen(txBuffer));
             }
         }
-        if((uartTxCount > 0) || uartZlpRequired){
-            if(USBUART_CDCIsReady()){
-                USBUART_PutData(uartTxQueue,uartTxCount);
-                uartZlpRequired = (uartTxCount == 64);
-                uartTxCount = 0;
-            }
-        }
-        
-        taskEXIT_CRITICAL();
-        //USBUART_PutString_Wrapper("Hello World\r\n");
     }
     
 }

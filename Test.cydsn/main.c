@@ -38,7 +38,7 @@ int main(void)
     
     USBUART_Setup();
     
-    xTaskCreate(vUartTxIsrTask,"test3",100,NULL,3,NULL);
+    xTaskCreate(vUartTxTask,"test3",100,NULL,1,NULL);
     
     vTaskStartScheduler();
     
@@ -61,16 +61,18 @@ void FreeRTOS_Setup(){
 
 void vTestTask1(){
     for(;;){
+        LED_1_Write(1);  
+        USBUARTPutStringQue("HELLO\r\n");
         vTaskDelay(1000);
-        LED_1_Write(1);        
     }    
 }
 //LEDを消灯させるタスク
 void vTestTask2(){
-    vTaskDelay(500);
-    for(;;){
+    vTaskDelay(500);   
+    for(;;){      
+        LED_1_Write(0);
+        USBUARTPutStringQue("WORLD\r\n");
         vTaskDelay(1000);
-        LED_1_Write(0);        
     }    
 }
 
