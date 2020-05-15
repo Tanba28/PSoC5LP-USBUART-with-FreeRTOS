@@ -66,25 +66,26 @@ void vTestTask1(){
     
     for(;;){
         LED_1_Write(1);  
-        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello\r\n",xTaskGetTickCount());
+        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",xTaskGetTickCount());
+        //sprintf(buf,"A %07.0f Hello Hello Hello Hello Hello Hello Hello\r\n",(float)xTaskGetTickCount());
         vUSBUARTPutString(buf);
         count++;
-        vTaskDelayUntil(&tick,100);
+        vTaskDelayUntil(&tick,10000);
     }    
 }
 
 void vTestTask2(){
     uint count = 0;
-    vTaskDelay(5);  
+    vTaskDelay(5000);  
     TickType_t tick = xTaskGetTickCount();
     char buf[128];    
     
     for(;;){      
         LED_1_Write(0);  
-        sprintf(buf,"B %07d World World World World World World World\r\n",xTaskGetTickCount());
+        sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",xTaskGetTickCount());
         vUSBUARTPutString(buf);
         count++;
-        vTaskDelayUntil(&tick,100);
+        vTaskDelayUntil(&tick,10000);
     }    
 }
 

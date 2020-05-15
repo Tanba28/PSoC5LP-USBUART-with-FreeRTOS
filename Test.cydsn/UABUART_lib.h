@@ -83,17 +83,21 @@ void vUSBUARTTxTask(){
     char cString[64];//One packet tx buffer
     uint8_t ucUartTxCounter = 0;
     
-    TickType_t xTick = xTaskGetTickCount();
-    for(;;){        
+    for(;;){     
         xStatus = xQueueReceive(xUartTxFifoQue,&cString[ucUartTxCounter],portMAX_DELAY);
         
         if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0 || ucUartTxCounter == 63){
-            USBUART_PutData((uint8_t*)cString,ucUartTxCounter);
-            ucUartTxCounter = 0;
+            if(USBUART_CDCIsReady()){
+                USBUART_PutData((uint8_t*)cString,ucUartTxCounter+1);
+                ucUartTxCounter = 0;
+
+            }
             
             if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0){
                 xSemaphoreGive(xUartTxBinarySemaphor) ;
-            }
+            } 
+
+
         }
         
         else{
