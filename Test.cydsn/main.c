@@ -18,11 +18,11 @@
 
 #include "UABUART_lib.h"
 #include "xprintf.h"
+
 void vTestTask1();
 void vTestTask2();
+void vTestTask3();
 void FreeRTOS_Setup();
-
-
 
 int main(void)
 {
@@ -33,12 +33,14 @@ int main(void)
     FreeRTOS_Setup();
     USBUART_Start_Wrapper();
     
-    xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
-    xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
+    //xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
+    //xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
+    xTaskCreate(vTestTask3,"test3",1000,NULL,3,NULL);
     
     USBUART_Setup();
     
     xTaskCreate(vUSBUARTTxTask,"test3",100,NULL,2,NULL);
+    xTaskCreate(vUSBUARTRxTask,"test4",100,NULL,4,NULL);
     
     vTaskStartScheduler();
     
@@ -70,13 +72,13 @@ void vTestTask1(){
         //sprintf(buf,"A %07.0f Hello Hello Hello Hello Hello Hello Hello\r\n",(float)xTaskGetTickCount());
         vUSBUARTPutString(buf);
         count++;
-        vTaskDelayUntil(&tick,10000);
+        vTaskDelayUntil(&tick,1000);
     }    
 }
 
 void vTestTask2(){
     uint count = 0;
-    vTaskDelay(5000);  
+    vTaskDelay(500);  
     TickType_t tick = xTaskGetTickCount();
     char buf[128];    
     
@@ -85,7 +87,29 @@ void vTestTask2(){
         sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",xTaskGetTickCount());
         vUSBUARTPutString(buf);
         count++;
-        vTaskDelayUntil(&tick,10000);
+        vTaskDelayUntil(&tick,1000);
+    }    
+}
+
+void vTestTask3(){
+    uint count = 0;
+    TickType_t tick = xTaskGetTickCount();
+    char buf[128] = "0";    
+    
+    for(;;){      
+        vUSBUARTGetChar(&buf[count]);
+        if(buf[0] == 'b'){
+            sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",xTaskGetTickCount());
+            vUSBUARTPutString(buf);
+            LED_1_Write(0);  
+        }
+        else if(buf[0] == 'a'){
+            sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",xTaskGetTickCount());
+            vUSBUARTPutString(buf);
+            LED_1_Write(1);  
+        }
+            
+        vTaskDelayUntil(&tick,10);
     }    
 }
 

@@ -55,10 +55,13 @@ void USBUART_PutString_Wrapper(const char8 string[]){
 }
 
 QueueHandle_t xUartTxFifoQue;
+QueueHandle_t xUartRxFifoQue;
+
 SemaphoreHandle_t xUartTxBinarySemaphor;
 
 void USBUART_Setup(){
     xUartTxFifoQue = xQueueCreate(64,1);//USBUART tx buffer queue.
+    xUartRxFifoQue = xQueueCreate(64,1);//USBUART tx buffer queue.
     xUartTxBinarySemaphor = xSemaphoreCreateBinary();//Binary semaphore for tx buffer prevent write conflict.
     
     xSemaphoreGive(xUartTxBinarySemaphor) ;
@@ -72,23 +75,21 @@ void vUSBUARTPutString(const char *cString){
 }
 
 void vUSBUARTPutChar(const char ch){
-    BaseType_t xStatus;
-    
-    xStatus = xQueueSendToBack(xUartTxFifoQue,&ch,portMAX_DELAY);
+    xQueueSendToBack(xUartTxFifoQue,&ch,portMAX_DELAY);
 }
 
 void vUSBUARTTxTask(){
-    BaseType_t xStatus;
-
-    char cString[64];//One packet tx buffer
+    char cUartTxBuffer[64];//One packet tx buffer
     uint8_t ucUartTxCounter = 0;
+    uint8_t ucUartTxQueCounter = 0;
     
-    for(;;){     
-        xStatus = xQueueReceive(xUartTxFifoQue,&cString[ucUartTxCounter],portMAX_DELAY);
+    for(;;){  
+        xQueueReceive(xUartTxFifoQue,&cUartTxBuffer[ucUartTxCounter],portMAX_DELAY);
+        ucUartTxQueCounter = uxQueueMessagesWaiting(xUartTxFifoQue);
         
         if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0 || ucUartTxCounter == 63){
             if(USBUART_CDCIsReady()){
-                USBUART_PutData((uint8_t*)cString,ucUartTxCounter+1);
+                USBUART_PutData((uint8_t*)cUartTxBuffer,ucUartTxCounter+1);
                 ucUartTxCounter = 0;
 
             }
@@ -96,8 +97,6 @@ void vUSBUARTTxTask(){
             if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0){
                 xSemaphoreGive(xUartTxBinarySemaphor) ;
             } 
-
-
         }
         
         else{
@@ -106,5 +105,34 @@ void vUSBUARTTxTask(){
     }
 }
 
+void vUSBUARTGetChar(char *ch){
+    xQueueReceive(xUartRxFifoQue,ch,portMAX_DELAY);
+}
+
+void vUSBUARTRxTask(){
+    char cUartRxBuffer[64];//One packet rx buffer
+    uint8_t ucUartRxCounter = 0;
+    uint8_t ucUartRxQueCounter = 0;
+    
+    TickType_t tick = xTaskGetTickCount();
+        
+    for(;;){
+        ucUartRxQueCounter = uxQueueMessagesWaiting(xUartRxFifoQue);
+
+        if(ucUartRxQueCounter < 64 && ucUartRxCounter > 0){            
+            xQueueSendToBack(xUartRxFifoQue,&cUartRxBuffer[ucUartRxCounter-1],portMAX_DELAY);
+            ucUartRxCounter--;
+        }       
+        
+        if(ucUartRxCounter < 64){
+            USBUART_Connection_Check();
+            if (USBUART_DataIsReady()) {
+                cUartRxBuffer[ucUartRxCounter] = USBUART_GetChar();
+                ucUartRxCounter++;
+            }
+        }
+        vTaskDelayUntil(&tick,10);
+    }
+}
 #endif
 /* [] END OF FILE */
