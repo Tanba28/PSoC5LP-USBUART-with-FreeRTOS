@@ -16,7 +16,7 @@
 #include "task.h"
 #include "semphr.h"
 
-#include "UABUART_lib.h"
+#include "USBUART_FreeRTOS.h"
 #include "xprintf.h"
 
 void vTestTask1();
@@ -31,7 +31,7 @@ int main(void)
     /* Place your initialization/startup code here (e.g. MyInst_Start()) */
 
     FreeRTOS_Setup();
-    USBUART_Start_Wrapper();
+    vUSBUARTStart();
     
     //xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
     //xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
@@ -68,7 +68,7 @@ void vTestTask1(){
     
     for(;;){
         LED_1_Write(1);  
-        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",xTaskGetTickCount());
+        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",(int)xTaskGetTickCount());
         //sprintf(buf,"A %07.0f Hello Hello Hello Hello Hello Hello Hello\r\n",(float)xTaskGetTickCount());
         vUSBUARTPutString(buf);
         count++;
@@ -84,7 +84,7 @@ void vTestTask2(){
     
     for(;;){      
         LED_1_Write(0);  
-        sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",xTaskGetTickCount());
+        sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",(int)xTaskGetTickCount());
         vUSBUARTPutString(buf);
         count++;
         vTaskDelayUntil(&tick,1000);
@@ -93,23 +93,23 @@ void vTestTask2(){
 
 void vTestTask3(){
     uint count = 0;
-    TickType_t tick = xTaskGetTickCount();
+    //TickType_t tick = xTaskGetTickCount();
     char buf[128] = "0";    
     
     for(;;){      
         vUSBUARTGetChar(&buf[count]);
         if(buf[0] == 'b'){
-            sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",xTaskGetTickCount());
+            sprintf(buf,"B %07d World World World\r\n",(int)xTaskGetTickCount());
             vUSBUARTPutString(buf);
             LED_1_Write(0);  
         }
         else if(buf[0] == 'a'){
-            sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",xTaskGetTickCount());
+            sprintf(buf,"A %07d Hello Hello Hello\r\n",(int)xTaskGetTickCount());
             vUSBUARTPutString(buf);
             LED_1_Write(1);  
         }
             
-        vTaskDelayUntil(&tick,10);
+        //vTaskDelayUntil(&tick,10);
     }    
 }
 

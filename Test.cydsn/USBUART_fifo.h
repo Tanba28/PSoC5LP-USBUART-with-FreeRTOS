@@ -9,8 +9,8 @@
  *
  * ========================================
 */
-#ifndef USBUART_LIB_H
-#define USBUART_LIB_H
+#ifndef USBUART_FIFO_H
+#define USBUART_FIFO_H
     
 #include "project.h"
 #include "stdio.h"
@@ -82,23 +82,29 @@ void vUSBUARTTxTask(){
     char cUartTxBuffer[64];//One packet tx buffer
     uint8_t ucUartTxCounter = 0;
     uint8_t ucUartTxQueCounter = 0;
-    
+    CYBIT xUartZlpFlag = 0;
     for(;;){  
         xQueueReceive(xUartTxFifoQue,&cUartTxBuffer[ucUartTxCounter],portMAX_DELAY);
         ucUartTxQueCounter = uxQueueMessagesWaiting(xUartTxFifoQue);
         
-        if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0 || ucUartTxCounter == 63){
+        if(ucUartTxQueCounter == 0 || ucUartTxCounter == 63){
             if(USBUART_CDCIsReady()){
                 USBUART_PutData((uint8_t*)cUartTxBuffer,ucUartTxCounter+1);
+                xUartZlpFlag = (ucUartTxCounter == 63 && ucUartTxQueCounter == 0);
                 ucUartTxCounter = 0;
-
             }
-            
-            if(uxQueueMessagesWaiting(xUartTxFifoQue) == 0){
+            if(xUartZlpFlag){
+                if(USBUART_CDCIsReady()){
+                    USBUART_PutData((uint8_t*)cUartTxBuffer,0);
+                }
+            }
+            if(ucUartTxQueCounter == 0){
                 xSemaphoreGive(xUartTxBinarySemaphor) ;
             } 
+            
+            //ucUartTxCounter = 0;
         }
-        
+
         else{
             ucUartTxCounter++;
         }
