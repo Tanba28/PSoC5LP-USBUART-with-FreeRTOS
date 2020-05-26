@@ -11,6 +11,7 @@
 */
 #include "project.h"
 #include "stdio.h"
+#include "string.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -22,6 +23,7 @@
 void vTestTask1();
 void vTestTask2();
 void vTestTask3();
+void vTestTask4();
 void FreeRTOS_Setup();
 
 int main(void)
@@ -33,14 +35,14 @@ int main(void)
     FreeRTOS_Setup();
     vUSBUARTStart();
     USBUART_Setup();
-    xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
-    xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
-    //xTaskCreate(vTestTask3,"test3",1000,NULL,3,NULL);
+    //xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);//Transfer test task A
+    //xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);//Transfer test task B
+    //xTaskCreate(vTestTask3,"test3",1000,NULL,3,NULL);//Receive test task
+    xTaskCreate(vTestTask4,"test4",1000,NULL,3,NULL);//Echo back test task
     
     
-    
-    xTaskCreate(vUSBUARTTxTask,"test3",100,NULL,3,NULL);
-    xTaskCreate(vUSBUARTRxTask,"test4",100,NULL,4,NULL);
+    xTaskCreate(vUSBUARTTxTask,"UART_TX",100,NULL,3,NULL);
+    xTaskCreate(vUSBUARTRxTask,"UART_RX",100,NULL,3,NULL);
     
     vTaskStartScheduler();
     
@@ -68,7 +70,7 @@ void vTestTask1(){
     for(;;){
         LED_1_Write(1);  
         sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",(int)xTaskGetTickCount());   
-        vUSBUARTPutString(buf);
+        vUSBUARTPutString(buf,strlen(buf));
         vTaskDelayUntil(&tick,10000);
     }    
 }
@@ -80,7 +82,7 @@ void vTestTask2(){
     for(;;){      
         LED_1_Write(0);  
         sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",(int)xTaskGetTickCount());
-        vUSBUARTPutString(buf);
+        vUSBUARTPutString(buf,strlen(buf));
         vTaskDelayUntil(&tick,10000);
     }    
 }
@@ -94,12 +96,12 @@ void vTestTask3(){
         vUSBUARTGetChar(&buf[count]);
         if(buf[0] == 'b'){
             sprintf(buf,"B %07d World World World\r\n",(int)xTaskGetTickCount());
-            vUSBUARTPutString(buf);
+            vUSBUARTPutString(buf,strlen(buf));
             LED_1_Write(0);  
         }
         else if(buf[0] == 'a'){
             sprintf(buf,"A %07d Hello Hello Hello\r\n",(int)xTaskGetTickCount());
-            vUSBUARTPutString(buf);
+            vUSBUARTPutString(buf,strlen(buf));
             LED_1_Write(1);  
         }
             
@@ -107,6 +109,14 @@ void vTestTask3(){
     }    
 }
 
+void vTestTask4(){
+    char buf[128] = "0";    
+    
+    for(;;){      
+        vUSBUARTGetString(buf,1);
+        vUSBUARTPutString(buf,1);
+    }    
+}
 //オーバーフローが起こった際のハンドラ
 void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
