@@ -32,14 +32,14 @@ int main(void)
 
     FreeRTOS_Setup();
     vUSBUARTStart();
-    
-    //xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
-    //xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
-    xTaskCreate(vTestTask3,"test3",1000,NULL,3,NULL);
-    
     USBUART_Setup();
+    xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);
+    xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);
+    //xTaskCreate(vTestTask3,"test3",1000,NULL,3,NULL);
     
-    xTaskCreate(vUSBUARTTxTask,"test3",100,NULL,2,NULL);
+    
+    
+    xTaskCreate(vUSBUARTTxTask,"test3",100,NULL,3,NULL);
     xTaskCreate(vUSBUARTRxTask,"test4",100,NULL,4,NULL);
     
     vTaskStartScheduler();
@@ -62,32 +62,26 @@ void FreeRTOS_Setup(){
 }
 
 void vTestTask1(){
-    uint count = 0;
     TickType_t tick = xTaskGetTickCount();
     char buf[128];
     
     for(;;){
         LED_1_Write(1);  
-        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",(int)xTaskGetTickCount());
-        //sprintf(buf,"A %07.0f Hello Hello Hello Hello Hello Hello Hello\r\n",(float)xTaskGetTickCount());
+        sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",(int)xTaskGetTickCount());   
         vUSBUARTPutString(buf);
-        count++;
-        vTaskDelayUntil(&tick,1000);
+        vTaskDelayUntil(&tick,10000);
     }    
 }
 
 void vTestTask2(){
-    uint count = 0;
-    vTaskDelay(500);  
+    vTaskDelay(5000);  
     TickType_t tick = xTaskGetTickCount();
-    char buf[128];    
-    
+    char buf[128];       
     for(;;){      
         LED_1_Write(0);  
         sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",(int)xTaskGetTickCount());
         vUSBUARTPutString(buf);
-        count++;
-        vTaskDelayUntil(&tick,1000);
+        vTaskDelayUntil(&tick,10000);
     }    
 }
 
