@@ -15,10 +15,8 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "semphr.h"
 
 #include "USBUART_FreeRTOS.h"
-#include "xprintf.h"
 
 void vTestTask1();
 void vTestTask2();
@@ -34,15 +32,11 @@ int main(void)
 
     FreeRTOS_Setup();
     vUSBUARTStart();
-    USBUART_Setup();
+
     //xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);//Transfer test task A
     //xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);//Transfer test task B
     //xTaskCreate(vTestTask3,"test3",1000,NULL,3,NULL);//Receive test task
     xTaskCreate(vTestTask4,"test4",1000,NULL,3,NULL);//Echo back test task
-    
-    
-    xTaskCreate(vUSBUARTTxTask,"UART_TX",100,NULL,3,NULL);
-    xTaskCreate(vUSBUARTRxTask,"UART_RX",100,NULL,3,NULL);
     
     vTaskStartScheduler();
     
@@ -66,7 +60,6 @@ void FreeRTOS_Setup(){
 void vTestTask1(){
     TickType_t tick = xTaskGetTickCount();
     char buf[128];
-    
     for(;;){
         LED_1_Write(1);  
         sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",(int)xTaskGetTickCount());   
@@ -117,20 +110,24 @@ void vTestTask4(){
         vUSBUARTPutString(buf,1);
     }    
 }
+
+#if configCHECK_FOR_STACK_OVERFLOW != 0
 //オーバーフローが起こった際のハンドラ
 void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
     /* The stack space has been execeeded for a task, considering allocating more. */
     taskDISABLE_INTERRUPTS();
 }/*---------------------------------------------------------------------------*/
+#endif
 
+#if configUSE_MALLOC_FAILED_HOOK != 0
 //メモリの確保に失敗したときのハンドラ
 void vApplicationMallocFailedHook( void )
 {
     /* The heap space has been execeeded. */
     taskDISABLE_INTERRUPTS();
 }
-
+#endif
 
 
 /* [] END OF FILE */
