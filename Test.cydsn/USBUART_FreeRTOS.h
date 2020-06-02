@@ -20,9 +20,9 @@
 #include "semphr.h"
 
 /* Public Function *************************************************/
-void vUSBUARTStart();/* USBUART Start Wrapper Prototype */
-void vUSBUARTPutString(const char string[],const uint8_t ucLen);
-void vUSBUARTGetString(char * cString,uint8_t ucLen);
+void USBUARTStart();/* USBUART Start Wrapper Prototype */
+void USBUARTPutString(const char *string, const uint8_t len);
+void USBUARTGetString(char * string,uint8_t len);
 
 #endif
 /* [] END OF FILE */

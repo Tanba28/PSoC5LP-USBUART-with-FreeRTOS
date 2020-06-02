@@ -31,7 +31,7 @@ int main(void)
     /* Place your initialization/startup code here (e.g. MyInst_Start()) */
 
     FreeRTOS_Setup();
-    vUSBUARTStart();
+    USBUARTStart();
 
     //xTaskCreate(vTestTask1,"test1",1000,NULL,3,NULL);//Transfer test task A
     //xTaskCreate(vTestTask2,"test2",1000,NULL,3,NULL);//Transfer test task B
@@ -63,7 +63,7 @@ void vTestTask1(){
     for(;;){
         LED_1_Write(1);  
         sprintf(buf,"A %07d Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello\r\n",(int)xTaskGetTickCount());   
-        vUSBUARTPutString(buf,strlen(buf));
+        USBUARTPutString(buf,strlen(buf));
         vTaskDelayUntil(&tick,10000);
     }    
 }
@@ -75,7 +75,7 @@ void vTestTask2(){
     for(;;){      
         LED_1_Write(0);  
         sprintf(buf,"B %07d World World World World World World World World World World World World World World\r\n",(int)xTaskGetTickCount());
-        vUSBUARTPutString(buf,strlen(buf));
+        USBUARTPutString(buf,strlen(buf));
         vTaskDelayUntil(&tick,10000);
     }    
 }
@@ -86,15 +86,15 @@ void vTestTask3(){
     char buf[128] = "0";    
     
     for(;;){      
-        vUSBUARTGetString(&buf[count],1);
+        USBUARTGetString(&buf[count],1);
         if(buf[0] == 'b'){
             sprintf(buf,"B %07d World World World\r\n",(int)xTaskGetTickCount());
-            vUSBUARTPutString(buf,strlen(buf));
+            USBUARTPutString(buf,strlen(buf));
             LED_1_Write(0);  
         }
         else if(buf[0] == 'a'){
             sprintf(buf,"A %07d Hello Hello Hello\r\n",(int)xTaskGetTickCount());
-            vUSBUARTPutString(buf,strlen(buf));
+            USBUARTPutString(buf,strlen(buf));
             LED_1_Write(1);  
         }
             
@@ -106,8 +106,8 @@ void vTestTask4(){
     char buf[128] = "0";    
     
     for(;;){      
-        vUSBUARTGetString(buf,1);
-        vUSBUARTPutString(buf,1);
+        USBUARTGetString(buf,1);
+        USBUARTPutString(buf,1);
     }    
 }
 

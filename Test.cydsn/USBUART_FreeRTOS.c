@@ -12,25 +12,24 @@
 #include "USBUART_FreeRTOS.h"
 
 /* Static Function *************************************************/
-static void vUSBUARTSetup();
+static void initVariable();
 
 /* Static Tx Prototype Function */
-static void vUSBUARTPutChar(const char ch);
-static void vUSBUARTTxTask();
+static void putChar(const char ch);
+static void txTask();
 
 /* StaticRx Prototype Function */
-
-static void vUSBUARTGetChar(char *ch);
-static void vUSBUARTRxTask();
+static void getChar(char *ch);
+static void rxTask();
     
 /* FreeRTOS Hundle */
-static QueueHandle_t xUartTxFifoQue;
-static QueueHandle_t xUartRxFifoQue;
+static QueueHandle_t tx_fifo_que;
+static QueueHandle_t rx_fifo_que;
 
-static SemaphoreHandle_t xUartTxBinarySemaphor;
-static SemaphoreHandle_t xUartRxBinarySemaphor;
+static SemaphoreHandle_t tx_binary_semaphor;
+static SemaphoreHandle_t rx_binary_semaphor;
 
-void vUSBUARTStart(){
+void USBUARTStart(){
     USBUART_Start(0, USBUART_DWR_VDDD_OPERATION);
     //500ms TimeOut
     for(uint8_t i=0;i<100;i++){
@@ -40,91 +39,94 @@ void vUSBUARTStart(){
         }
         CyDelay(5);
     }
-    vUSBUARTSetup();
+    initVariable();
     
-    xTaskCreate(vUSBUARTTxTask,"UART_TX",100,NULL,3,NULL);
-    xTaskCreate(vUSBUARTRxTask,"UART_RX",100,NULL,3,NULL);
+    xTaskCreate(txTask,"UART_TX",100,NULL,3,NULL);
+    xTaskCreate(rxTask,"UART_RX",100,NULL,3,NULL);
+}
+
+void USBUARTPutString(const char *string, const uint8_t len){    
+    xSemaphoreTake(tx_binary_semaphor,portMAX_DELAY);//Prevent queue write conflict.
+    for(uint8_t count=0; count<len; count++){
+        putChar(string[count]);
+    }    
+    xSemaphoreGive(tx_binary_semaphor);
+}
+
+void USBUARTGetString(char * string,uint8_t len){
+    xSemaphoreTake(rx_binary_semaphor,portMAX_DELAY);//Prevent queue read conflict.
+    for(uint8_t count=0; count<len; count++){
+        getChar(&string[count]);
+    }  
+    xSemaphoreGive(rx_binary_semaphor);
 }
 
 /* USBUART Setup*/
-static void vUSBUARTSetup(){
-    xUartTxFifoQue = xQueueCreate(64,1);//USBUART tx buffer queue.
-    xUartRxFifoQue = xQueueCreate(64,1);//USBUART rx buffer queue.
-    xUartTxBinarySemaphor = xSemaphoreCreateBinary();//Binary semaphore for tx buffer prevent write conflict.
-    xUartRxBinarySemaphor = xSemaphoreCreateBinary();//Binary semaphore for rx buffer prevent Read conflict.
+static void initVariable(){
+    tx_fifo_que = xQueueCreate(64,1);//USBUART tx buffer queue.
+    rx_fifo_que = xQueueCreate(64,1);//USBUART rx buffer queue.
+    tx_binary_semaphor = xSemaphoreCreateBinary();//Binary semaphore for tx buffer prevent write conflict.
+    rx_binary_semaphor = xSemaphoreCreateBinary();//Binary semaphore for rx buffer prevent Read conflict.
     
-    xSemaphoreGive(xUartTxBinarySemaphor);
-    xSemaphoreGive(xUartRxBinarySemaphor);
+    xSemaphoreGive(tx_binary_semaphor);
+    xSemaphoreGive(rx_binary_semaphor);
 }
 
 /* Tx Function */
-void vUSBUARTPutString(const char *cString, const uint8_t ucLen){    
-    xSemaphoreTake(xUartTxBinarySemaphor,portMAX_DELAY);//Prevent queue write conflict.
-    for(uint8_t ucCount=0; ucCount<ucLen; ucCount++){
-        vUSBUARTPutChar(cString[ucCount]);
-    }    
-    xSemaphoreGive(xUartTxBinarySemaphor);
+static void putChar(const char ch){
+    xQueueSendToBack(tx_fifo_que,&ch,portMAX_DELAY);
 }
 
-static void vUSBUARTPutChar(const char ch){
-    xQueueSendToBack(xUartTxFifoQue,&ch,portMAX_DELAY);
-}
-
-static void vUSBUARTTxTask(){
-    char cUartTxBuffer[64];//One packet tx buffer
-    uint8_t ucUartTxCounter = 0;
-    uint8_t ucUartTxQueCounter = 0;
+static void txTask(){
+    char tx_buffer[64];//One packet tx buffer
+    uint8_t tx_que_count = 0;
     
-    TickType_t xTick = xTaskGetTickCount();
+    TickType_t tick = xTaskGetTickCount();
     for(;;){
-        ucUartTxQueCounter = uxQueueMessagesWaiting(xUartTxFifoQue);
-        for(ucUartTxCounter=0;ucUartTxCounter<ucUartTxQueCounter;ucUartTxCounter++){
-            xQueueReceive(xUartTxFifoQue,&cUartTxBuffer[ucUartTxCounter],0);
+        tx_que_count = uxQueueMessagesWaiting(tx_fifo_que);
+        for(uint8_t count=0;count<tx_que_count;count++){
+            xQueueReceive(tx_fifo_que,&tx_buffer[count],0);
         }        
         
-        if(ucUartTxQueCounter != 0){
+        if(tx_que_count != 0){
             if(USBUART_CDCIsReady()){
-                USBUART_PutData((uint8_t*)cUartTxBuffer,ucUartTxQueCounter);
-                ucUartTxCounter = 0;
+                USBUART_PutData((uint8_t*)tx_buffer,tx_que_count);
+                
             }           
         }
-        vTaskDelayUntil(&xTick,5);
+        vTaskDelayUntil(&tick,5);
     }
 }
 
 /* Rx Function */
-void vUSBUARTGetString(char * cString,uint8_t ucLen){
-    xSemaphoreTake(xUartRxBinarySemaphor,portMAX_DELAY);//Prevent queue read conflict.
-    for(uint8_t ucCount=0; ucCount<ucLen; ucCount++){
-        vUSBUARTGetChar(&cString[ucCount]);
-    }  
-    xSemaphoreGive(xUartRxBinarySemaphor);
-}
-static void vUSBUARTGetChar(char *ch){
-    xQueueReceive(xUartRxFifoQue,ch,portMAX_DELAY);
+
+static void getChar(char *ch){
+    xQueueReceive(rx_fifo_que,ch,portMAX_DELAY);
 }
 
-static void vUSBUARTRxTask(){
-    char cUartRxBuffer[64];//One packet rx buffer
-    uint8_t ucUartRxCounter = 0;
-    uint8_t ucUartRxQueCounter = 0;
+static void rxTask(){
+    char rx_buffer[64];//One packet rx buffer
+    uint8_t rx_buffer_count = 0;
+    uint8_t rx_que_count = 0;
     
-    TickType_t xTick = xTaskGetTickCount();
+    TickType_t tick = xTaskGetTickCount();
         
     for(;;){
-        ucUartRxQueCounter = uxQueueMessagesWaiting(xUartRxFifoQue);
-        if(ucUartRxQueCounter < 64 && ucUartRxCounter > 0){            
-            xQueueSendToBack(xUartRxFifoQue,&cUartRxBuffer[ucUartRxCounter-1],portMAX_DELAY);
-            ucUartRxCounter--;
+        rx_que_count = uxQueueMessagesWaiting(rx_fifo_que);
+
+        if(rx_que_count < 64 && rx_buffer_count > 0){            
+            xQueueSendToBack(rx_fifo_que,&rx_buffer[rx_buffer_count-1],portMAX_DELAY);
+            rx_buffer_count--;
         }       
         
-        if(ucUartRxCounter < 64){         
+        if(rx_buffer_count < 64){         
             if (USBUART_DataIsReady()) {
-                cUartRxBuffer[ucUartRxCounter] = USBUART_GetChar();
-                ucUartRxCounter++;
+                rx_buffer[rx_buffer_count] = USBUART_GetChar();
+                rx_buffer_count++;
             }
         }
-        vTaskDelayUntil(&xTick,5);
+        
+        vTaskDelayUntil(&tick,5);
     }
 }
 
