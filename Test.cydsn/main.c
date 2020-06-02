@@ -86,7 +86,7 @@ void vTestTask3(){
     char buf[128] = "0";    
     
     for(;;){      
-        vUSBUARTGetChar(&buf[count]);
+        vUSBUARTGetString(&buf[count],1);
         if(buf[0] == 'b'){
             sprintf(buf,"B %07d World World World\r\n",(int)xTaskGetTickCount());
             vUSBUARTPutString(buf,strlen(buf));
