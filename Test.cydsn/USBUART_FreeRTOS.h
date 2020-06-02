@@ -24,5 +24,8 @@ void USBUARTStart();/* USBUART Start Wrapper Prototype */
 void USBUARTPutString(const char *string, const uint8_t len);
 void USBUARTGetString(char * string,uint8_t len);
 
+uint8_t USBUARTGetTxBufferCount();
+uint8_t USBUARTGetRxBufferCount();
+
 #endif
 /* [] END OF FILE */

@@ -61,6 +61,14 @@ void USBUARTGetString(char * string,uint8_t len){
     xSemaphoreGive(rx_binary_semaphor);
 }
 
+uint8_t USBUARTGetTxBufferCount(){
+    return uxQueueMessagesWaiting(tx_fifo_que);
+}
+
+uint8_t USBUARTGetRxBufferCount(){
+    return uxQueueMessagesWaiting(rx_fifo_que);
+}
+
 /* USBUART Setup*/
 static void initVariable(){
     tx_fifo_que = xQueueCreate(64,1);//USBUART tx buffer queue.

@@ -104,10 +104,11 @@ void vTestTask3(){
 
 void vTestTask4(){
     char buf[128] = "0";    
-    
-    for(;;){      
-        USBUARTGetString(buf,1);
-        USBUARTPutString(buf,1);
+    uint8_t temp;
+    for(;;){     
+        temp = USBUARTGetRxBufferCount();
+        USBUARTGetString(buf,temp);
+        USBUARTPutString(buf,temp);
     }    
 }
 
