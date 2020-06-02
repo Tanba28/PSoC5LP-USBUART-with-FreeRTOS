@@ -108,21 +108,20 @@ static void rxTask(){
     char rx_buffer[64];//One packet rx buffer
     uint8_t rx_buffer_count = 0;
     uint8_t rx_que_count = 0;
-    
+
     TickType_t tick = xTaskGetTickCount();
         
     for(;;){
         rx_que_count = uxQueueMessagesWaiting(rx_fifo_que);
 
-        if(rx_que_count < 64 && rx_buffer_count > 0){            
-            xQueueSendToBack(rx_fifo_que,&rx_buffer[rx_buffer_count-1],portMAX_DELAY);
-            rx_buffer_count--;
-        }       
-        
-        if(rx_buffer_count < 64){         
-            if (USBUART_DataIsReady()) {
-                rx_buffer[rx_buffer_count] = USBUART_GetChar();
-                rx_buffer_count++;
+        if(rx_que_count == 0){
+            if(USBUART_DataIsReady()){
+                rx_buffer_count = USBUART_GetCount();
+                rx_buffer_count =  USBUART_GetData((uint8_t*)rx_buffer,rx_buffer_count);
+                
+                for(uint8_t count = 0;count < rx_buffer_count;count++){
+                    xQueueSendToBack(rx_fifo_que,&rx_buffer[count],0);
+                }
             }
         }
         
